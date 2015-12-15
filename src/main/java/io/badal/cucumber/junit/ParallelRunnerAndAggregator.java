@@ -24,26 +24,32 @@ import java.util.*;
 import java.util.concurrent.*;
 
 /**
- * Created by sbadal on 10/18/15.
+ * Created by badal on 10/18/15.
  */
 public abstract class ParallelRunnerAndAggregator<T extends ParallelRunnerAndAggregator, U extends ResultAggregator>
         extends Runner {
 
     private U resultAggregator;
+    private ExecutorService executorService;
 
-    protected ParallelRunnerAndAggregator() throws InitializationError {
+    protected ParallelRunnerAndAggregator(ExecutorService executorService) throws InitializationError {
         super();
+        this.executorService = executorService;
         resultAggregator = newAggregator();
     }
 
     protected abstract U newAggregator();
+
+    protected ExecutorService getExecutorService(){
+        return this.executorService;
+    }
 
     public void run(RunNotifier notifier) {
         throw new UnsupportedOperationException();
     }
 
     public Future<U> runAsync(final RunNotifier notifier) {
-        return getExecutorService().submit(() -> {
+        return executorService.submit(() -> {
             List<Future<U>> futures = new ArrayList<>();
             for (T t : getChildren()) {
                 futures.add(runChildAsync(notifier, t));
@@ -53,10 +59,6 @@ public abstract class ParallelRunnerAndAggregator<T extends ParallelRunnerAndAgg
             }
             return resultAggregator;
         });
-    }
-
-    protected ExecutorService getExecutorService() {
-        return Executors.newSingleThreadExecutor();
     }
 
     protected Description describeChild(ParallelRunnerAndAggregator child) {

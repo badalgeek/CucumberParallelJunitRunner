@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cucumber.example.java;
+package io.badal.cucumber.app;
 
 import java.util.Deque;
 import java.util.LinkedList;
@@ -27,11 +27,7 @@ public class RpnCalculator {
     private static final List<String> OPS = asList("-", "+", "*", "/");
 
     public void push(Object arg) {
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        addLatency();
         if (OPS.contains(arg)) {
             Number y = stack.removeLast();
             Number x = stack.isEmpty() ? 0 : stack.removeLast();
@@ -52,20 +48,20 @@ public class RpnCalculator {
     }
 
     public void PI() {
-        try {
-            Thread.sleep(300);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        addLatency();
         push(Math.PI);
     }
 
-    public Number value() {
+    private void addLatency() {
         try {
             Thread.sleep(300);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+    }
+
+    public Number value() {
+        addLatency();
         return stack.getLast();
     }
 }

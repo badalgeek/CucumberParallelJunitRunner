@@ -28,10 +28,11 @@ import org.junit.runners.model.InitializationError;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
 /**
- * Created by sbadal on 10/18/15.
+ * Created by badal on 10/18/15.
  */
 public class ParallelFeatureRunner extends ParallelRunnerAndAggregator<ParallelRunnerAndAggregator, ParallelJunitReporter>  {
 
@@ -39,8 +40,8 @@ public class ParallelFeatureRunner extends ParallelRunnerAndAggregator<ParallelR
     private CucumberFeature cucumberFeature;
     private final List<ParallelRunnerAndAggregator> children = new ArrayList<>();
 
-    public ParallelFeatureRunner(CucumberFeature cucumberFeature, ParallelCucumberExecutor executor) throws InitializationError {
-        super();
+    public ParallelFeatureRunner(CucumberFeature cucumberFeature, ParallelCucumberExecutor executor, ExecutorService executorService) throws InitializationError {
+        super(executorService);
         this.cucumberFeature = cucumberFeature;
         addChildren(executor);
     }
@@ -77,10 +78,10 @@ public class ParallelFeatureRunner extends ParallelRunnerAndAggregator<ParallelR
                 ParallelRunnerAndAggregator featureElementRunner;
                 if (cucumberTagStatement instanceof CucumberScenario) {
                     featureElementRunner = new ParallelExecutionUnitRunner((CucumberScenario) cucumberTagStatement,
-                            executor);
+                            executor, getExecutorService());
                 } else {
                     featureElementRunner = new ParallelScenarioOutlineRunner(
-                            (CucumberScenarioOutline) cucumberTagStatement, executor);
+                            (CucumberScenarioOutline) cucumberTagStatement, executor, getExecutorService());
                 }
                 children.add(featureElementRunner);
             } catch (InitializationError e) {
@@ -96,3 +97,4 @@ public class ParallelFeatureRunner extends ParallelRunnerAndAggregator<ParallelR
         return future;
     }
 }
+

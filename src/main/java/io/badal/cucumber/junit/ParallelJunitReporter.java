@@ -31,7 +31,7 @@ import java.util.function.Consumer;
 import static cucumber.runtime.Runtime.isPending;
 
 /**
- * Created by sbadal on 10/18/15.
+ * Created by badal on 10/18/15.
  */
 public class ParallelJunitReporter implements Reporter, Formatter, ResultAggregator<ParallelJunitReporter.ReporterAndFormatter> {
 
@@ -45,7 +45,6 @@ public class ParallelJunitReporter implements Reporter, Formatter, ResultAggrega
     private RunNotifier runNotifier;
     private ParallelExecutionUnitRunner parallelExecutionUnitRunner;
     private boolean lastRetry = false;
-    private Result result;
 
     public ParallelJunitReporter() {
         this(false);
@@ -178,7 +177,7 @@ public class ParallelJunitReporter implements Reporter, Formatter, ResultAggrega
     @Override
     public void result(Result result) {
         Throwable error = result.getError();
-        if (Result.SKIPPED == result && isLastRetry()) {
+        if (Result.SKIPPED == result) {
             stepNotifier.fireTestIgnored();
         } else if (isPendingOrUndefined(result) && isLastRetry()) {
             addFailureOrIgnoreStep(result);
@@ -186,8 +185,13 @@ public class ParallelJunitReporter implements Reporter, Formatter, ResultAggrega
             if (stepNotifier != null) {
                 //Should only fireTestStarted if not ignored
                 stepNotifier.fireTestStarted();
-                if (error != null) {
+                if (error != null && isLastRetry()) {
                     stepNotifier.addFailure(error);
+                    events.add((rf) -> {
+                        rf.getReporter().result(new Result(Result.FAILED, 0L, getLastRetryExceptionWithStackTrace(), "Last retry Got failed"));
+                    });
+                } else if (error != null) {
+                    stepNotifier.fireTestIgnored();
                 }
                 stepNotifier.fireTestFinished();
             }
@@ -205,6 +209,14 @@ public class ParallelJunitReporter implements Reporter, Formatter, ResultAggrega
         events.add((rf) -> {
             rf.getReporter().result(result);
         });
+    }
+
+    private LastRetryFailedException getLastRetryExceptionWithStackTrace() {
+        try {
+            throw new LastRetryFailedException();
+        } catch (LastRetryFailedException ex) {
+            return ex;
+        }
     }
 
     @Override
@@ -317,6 +329,10 @@ public class ParallelJunitReporter implements Reporter, Formatter, ResultAggrega
         public Formatter getFormatter() {
             return formatter;
         }
+
+    }
+
+    public static class LastRetryFailedException extends RuntimeException {
 
     }
 }

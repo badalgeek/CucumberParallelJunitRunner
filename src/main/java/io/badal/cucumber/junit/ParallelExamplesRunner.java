@@ -22,9 +22,10 @@ import org.junit.runners.model.InitializationError;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 
 /**
- * Created by sbadal on 10/18/15.
+ * Created by badal on 10/18/15.
  */
 public class ParallelExamplesRunner  extends ParallelRunnerAndAggregator<ParallelRunnerAndAggregator, ParallelJunitReporter>{
 
@@ -32,8 +33,9 @@ public class ParallelExamplesRunner  extends ParallelRunnerAndAggregator<Paralle
     private Description description;
     private final List<ParallelRunnerAndAggregator> children;
 
-    public ParallelExamplesRunner(CucumberExamples cucumberExamples, ParallelCucumberExecutor executor) throws InitializationError {
-        super();
+    public ParallelExamplesRunner(CucumberExamples cucumberExamples, ParallelCucumberExecutor executor, ExecutorService executorService)
+            throws InitializationError {
+        super(executorService);
         this.cucumberExamples = cucumberExamples;
         this.children = this.createChildren(cucumberExamples, executor);
     }
@@ -43,7 +45,7 @@ public class ParallelExamplesRunner  extends ParallelRunnerAndAggregator<Paralle
         List<CucumberScenario> exampleScenarios = cucumberExamples.createExampleScenarios();
         for (CucumberScenario scenario : exampleScenarios) {
             try {
-                ParallelExecutionUnitRunner exampleScenarioRunner = new ParallelExecutionUnitRunner(scenario, executor);
+                ParallelExecutionUnitRunner exampleScenarioRunner = new ParallelExecutionUnitRunner(scenario, executor, getExecutorService());
                 runners.add(exampleScenarioRunner);
             } catch (InitializationError initializationError) {
                 initializationError.printStackTrace();

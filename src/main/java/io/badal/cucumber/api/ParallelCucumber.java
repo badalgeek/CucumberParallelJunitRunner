@@ -30,25 +30,25 @@ import org.junit.runners.model.InitializationError;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
 /**
- * Created by sbadal on 10/18/15.
+ * Created by badal on 10/18/15.
  */
 public class ParallelCucumber extends ParentRunner<ParallelFeatureRunner> {
 
     private List<ParallelFeatureRunner> children = new ArrayList<ParallelFeatureRunner>();
     private List<Future<ParallelJunitReporter>> features;
     private ParallelCucumberExecutor parallelCucumberExecutor;
+    private ExecutorService executorService;
 
     public ParallelCucumber(Class<?> testClass) throws InitializationError {
         super(testClass);
+        this.executorService = Executors.newCachedThreadPool();
         features = new ArrayList<>();
-        Assertions.assertNoCucumberAnnotatedMethods(testClass);
 
         ClassLoader classLoader = testClass.getClassLoader();
         ResourceLoader resourceLoader = new MultiLoader(classLoader);
@@ -69,7 +69,7 @@ public class ParallelCucumber extends ParentRunner<ParallelFeatureRunner> {
 
     private void addChildren(List<CucumberFeature> cucumberFeatures, ParallelCucumberExecutor executor) throws InitializationError {
         for (CucumberFeature cucumberFeature : cucumberFeatures) {
-            children.add(new ParallelFeatureRunner(cucumberFeature, executor));
+            children.add(new ParallelFeatureRunner(cucumberFeature, executor, executorService));
         }
     }
 
@@ -107,5 +107,15 @@ public class ParallelCucumber extends ParentRunner<ParallelFeatureRunner> {
         }
         reporterAndFormatter.getFormatter().done();
         reporterAndFormatter.getFormatter().close();
+
+        try{
+            this.parallelCucumberExecutor.close();
+            this.executorService.shutdown();
+            if (!this.executorService.awaitTermination(10, TimeUnit.SECONDS)) {
+                System.out.println("ParallelCucumber: Couldn't shut down gracefully");
+            }
+        } catch (InterruptedException ex) {
+            ex.printStackTrace();
+        }
     }
 }

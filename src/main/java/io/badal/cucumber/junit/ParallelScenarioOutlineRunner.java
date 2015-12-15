@@ -22,9 +22,10 @@ import org.junit.runners.model.InitializationError;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 
 /**
- * Created by sbadal on 10/18/15.
+ * Created by badal on 10/18/15.
  */
 public class ParallelScenarioOutlineRunner  extends ParallelRunnerAndAggregator<ParallelRunnerAndAggregator, ParallelJunitReporter> {
 
@@ -32,8 +33,9 @@ public class ParallelScenarioOutlineRunner  extends ParallelRunnerAndAggregator<
     private Description description;
     private List<ParallelRunnerAndAggregator> children;
 
-    public ParallelScenarioOutlineRunner(CucumberScenarioOutline cucumberTagStatement, ParallelCucumberExecutor executor) throws InitializationError {
-        super();
+    public ParallelScenarioOutlineRunner(CucumberScenarioOutline cucumberTagStatement, ParallelCucumberExecutor executor,
+                                         ExecutorService executorService) throws InitializationError {
+        super(executorService);
         this.cucumberScenarioOutline = cucumberTagStatement;
         this.children = createChildren(cucumberScenarioOutline, executor);
     }
@@ -41,7 +43,7 @@ public class ParallelScenarioOutlineRunner  extends ParallelRunnerAndAggregator<
     private List<ParallelRunnerAndAggregator> createChildren(CucumberScenarioOutline cucumberScenarioOutline, ParallelCucumberExecutor executor) throws InitializationError {
         List<ParallelRunnerAndAggregator> runners = new ArrayList<>();
         for (CucumberExamples cucumberExamples : cucumberScenarioOutline.getCucumberExamplesList()) {
-            runners.add(new ParallelExamplesRunner(cucumberExamples, executor));
+            runners.add(new ParallelExamplesRunner(cucumberExamples, executor, getExecutorService()));
         }
         return runners;
     }

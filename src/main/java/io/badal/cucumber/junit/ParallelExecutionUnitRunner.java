@@ -26,10 +26,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
 /**
- * Created by sbadal on 10/18/15.
+ * Created by badal on 10/18/15.
  */
 public class ParallelExecutionUnitRunner
         extends ParallelRunnerAndAggregator<ParallelRunnerAndAggregator, ParallelJunitReporter>  {
@@ -40,8 +41,9 @@ public class ParallelExecutionUnitRunner
     private List<Step> runnerSteps = new ArrayList<>();
     private final Map<Step, Description> stepDescriptions = new HashMap<>();
 
-    public ParallelExecutionUnitRunner(CucumberScenario cucumberScenario, ParallelCucumberExecutor executor) throws InitializationError {
-        super();
+    public ParallelExecutionUnitRunner(CucumberScenario cucumberScenario, ParallelCucumberExecutor executor,
+                                       ExecutorService executorService) throws InitializationError {
+        super(executorService);
         this.cucumberScenario = cucumberScenario;
         this.executor = executor;
         initializeDescription();
@@ -79,6 +81,7 @@ public class ParallelExecutionUnitRunner
     }
 
     public void initializeChildForRetry(){
+        List<Step> retryRunnerSteps = new ArrayList<>();
         if (cucumberScenario.getCucumberBackground() != null) {
             for (Step backgroundStep : cucumberScenario.getCucumberBackground().getSteps()) {
                 // We need to make a copy of that step, so we have a unique one per scenario
@@ -90,13 +93,14 @@ public class ParallelExecutionUnitRunner
                         backgroundStep.getRows(),
                         backgroundStep.getDocString()
                 );
-                runnerSteps.add(copy);
+                retryRunnerSteps.add(copy);
             }
         }
 
         for (Step step : cucumberScenario.getSteps()) {
-            runnerSteps.add(step);
+            retryRunnerSteps.add(step);
         }
+        this.runnerSteps = retryRunnerSteps;
     }
 
     public Description describeStep(Step step) {

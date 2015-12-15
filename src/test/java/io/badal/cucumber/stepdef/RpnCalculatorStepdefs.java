@@ -12,7 +12,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */package cucumber.example.java;
+ */package io.badal.cucumber.stepdef;
 
 import cucumber.api.Scenario;
 import cucumber.api.java.After;
@@ -20,6 +20,7 @@ import cucumber.api.java.Before;
 import cucumber.api.java.en.Given;
 import cucumber.api.java.en.Then;
 import cucumber.api.java.en.When;
+import io.badal.cucumber.app.RpnCalculator;
 
 import java.util.List;
 

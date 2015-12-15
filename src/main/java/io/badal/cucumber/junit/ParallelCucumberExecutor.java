@@ -16,21 +16,22 @@
  */
 package io.badal.cucumber.junit;
 
-import cucumber.runtime.*;
+import cucumber.runtime.ClassFinder;
 import cucumber.runtime.Runtime;
+import cucumber.runtime.RuntimeOptions;
 import cucumber.runtime.io.ResourceLoader;
 import cucumber.runtime.io.ResourceLoaderClassFinder;
 import cucumber.runtime.model.CucumberScenario;
 import gherkin.formatter.Reporter;
+import gherkin.formatter.model.Scenario;
+import gherkin.formatter.model.Tag;
 import org.junit.runner.notification.RunNotifier;
-import org.junit.runners.ParentRunner;
-import org.junit.runners.model.InitializationError;
 
-import java.io.IOException;
-import java.util.concurrent.Callable;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by sbadal on 10/18/15.
@@ -43,6 +44,7 @@ public class ParallelCucumberExecutor {
     private ClassFinder classFinder;
     private ExecutorService executorService = Executors.newFixedThreadPool(getThreadPoolSize());
     private int maxRetryCount = getMaxRetryCount();
+    private final Object mutex;
 
     public ParallelCucumberExecutor(ResourceLoader resourceLoader, ClassLoader classLoader,
                                     RuntimeOptions runtimeOptions) {
@@ -50,24 +52,25 @@ public class ParallelCucumberExecutor {
         this.classLoader = classLoader;
         this.runtimeOptions = runtimeOptions;
         this.classFinder = new ResourceLoaderClassFinder(resourceLoader, classLoader);
+        this.mutex = new Object();
     }
 
     public Future<ParallelJunitReporter> executeScenario(ParallelExecutionUnitRunner parentRunner, CucumberScenario cucumberScenario,
-                                RunNotifier notifier) {
+                                                         RunNotifier notifier) {
         return executorService.submit(() -> {
             int retry = 0;
             ParallelJunitReporter parallelJunitReporter = new ParallelJunitReporter(runtimeOptions.isStrict());
-            while(++retry <= maxRetryCount) {
+            while (++retry <= maxRetryCount) {
+                if (retry == maxRetryCount) {
+                    parallelJunitReporter.setLastRetry(true);
+                }
                 Runtime runtime = createRuntime();
                 parallelJunitReporter.startExecutionUnit(parentRunner, notifier);
                 cucumberScenario.run(parallelJunitReporter, parallelJunitReporter, runtime);
-                if(runtime.getErrors().size() == 0){
+                if (runtime.getErrors().size() == 0) {
                     break;
                 }
                 parentRunner.initializeChildForRetry();
-                if (retry == maxRetryCount - 1) {
-                   parallelJunitReporter.setLastRetry(true);
-                }
                 System.out.println("Retrying " + cucumberScenario.getVisualName());
             }
             parallelJunitReporter.finishExecutionUnit();
@@ -80,8 +83,15 @@ public class ParallelCucumberExecutor {
                 runtimeOptions.formatter(classLoader));
     }
 
-    private Runtime createRuntime() {
-        return new Runtime(resourceLoader, classFinder, classLoader, runtimeOptions);
+    public void close() throws InterruptedException {
+        this.executorService.shutdown();
+        if (!this.executorService.awaitTermination(10, TimeUnit.SECONDS)) {
+            System.out.println("ParallelCucumberExecutor: Couldn't shut down gracefully");;
+        }
+    }
+
+    private synchronized Runtime createRuntime() {
+        return new ThreadSafeEnvironment(resourceLoader, classFinder, classLoader, runtimeOptions, mutex);
     }
 
     private static int getMaxRetryCount() {
@@ -89,7 +99,7 @@ public class ParallelCucumberExecutor {
         if (threads != null) {
             return Integer.parseInt(threads);
         }
-        return 3;
+        return 1;
     }
 
     private static int getThreadPoolSize() {
@@ -97,6 +107,29 @@ public class ParallelCucumberExecutor {
         if (threads != null) {
             return Integer.parseInt(threads);
         }
-        return 3;
+        return 1;
+    }
+
+    private static class ThreadSafeEnvironment extends Runtime {
+
+        private Object mutex;
+
+        public ThreadSafeEnvironment(ResourceLoader resourceLoader, ClassFinder classFinder, ClassLoader classLoader, RuntimeOptions runtimeOptions, Object mutex) {
+            super(resourceLoader, classFinder, classLoader, runtimeOptions);
+            this.mutex = mutex;
+        }
+
+        public void buildBackendWorlds(Reporter reporter, Set<Tag> tags, Scenario gherkinScenario) {
+            synchronized (mutex) {
+                super.buildBackendWorlds(reporter, tags, gherkinScenario);
+            }
+        }
+
+        public void disposeBackendWorlds(String scenarioDesignation) {
+            synchronized (mutex) {
+                super.disposeBackendWorlds(scenarioDesignation);
+            }
+        }
     }
 }
+

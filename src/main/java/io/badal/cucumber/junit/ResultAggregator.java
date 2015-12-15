@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * Created by sbadal on 10/20/15.
+ * Created by badal on 10/20/15.
  */
 public interface ResultAggregator<T> {
 
