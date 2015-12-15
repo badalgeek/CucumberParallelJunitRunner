@@ -5,7 +5,7 @@
     <groupId>com.badal</groupId>
     <artifactId>cucumber-parallel-junit-runner</artifactId>
     <packaging>jar</packaging>
-    <name>Cucumber Parallel Junit Runner</name>
+    <name>${project.groupId}:${project.artifactId}</name>
     <url>https://github.com/badalgeek/CucumberParallelJunitRunner</url>
 
     <properties>
