@@ -16,5 +16,5 @@ target
 build
 .idea
 *.iml
-
+.DS_Store
 java# Created by .ignore support plugin (hsz.mobi)

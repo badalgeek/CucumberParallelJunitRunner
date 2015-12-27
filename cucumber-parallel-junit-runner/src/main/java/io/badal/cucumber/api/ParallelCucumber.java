@@ -22,7 +22,11 @@ import cucumber.runtime.RuntimeOptionsFactory;
 import cucumber.runtime.io.MultiLoader;
 import cucumber.runtime.io.ResourceLoader;
 import cucumber.runtime.model.CucumberFeature;
-import io.badal.cucumber.junit.*;
+import io.badal.cucumber.CucumberConfigProvider;
+import io.badal.cucumber.CucumberProperties;
+import io.badal.cucumber.junit.ParallelCucumberExecutor;
+import io.badal.cucumber.junit.ParallelFeatureRunner;
+import io.badal.cucumber.junit.ParallelJunitReporter;
 import org.junit.runner.Description;
 import org.junit.runner.notification.RunNotifier;
 import org.junit.runners.ParentRunner;
@@ -32,8 +36,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.stream.Stream;
 
 /**
  * Created by badal on 10/18/15.
@@ -47,6 +49,7 @@ public class ParallelCucumber extends ParentRunner<ParallelFeatureRunner> {
 
     public ParallelCucumber(Class<?> testClass) throws InitializationError {
         super(testClass);
+        initializeConfiguration();
         this.executorService = Executors.newCachedThreadPool();
         features = new ArrayList<>();
 
@@ -60,6 +63,17 @@ public class ParallelCucumber extends ParentRunner<ParallelFeatureRunner> {
 
         List<CucumberFeature> cucumberFeatures = runtimeOptions.cucumberFeatures(resourceLoader);
         addChildren(cucumberFeatures, parallelCucumberExecutor);
+    }
+
+    private void initializeConfiguration() {
+        ParallelCucumberConfig annotation = this.getTestClass().getAnnotation(ParallelCucumberConfig.class);
+        if (annotation != null) {
+            CucumberConfigProvider cucumberConfigProvider = CucumberConfigProvider.getInstance();
+            cucumberConfigProvider.setProperty(CucumberProperties.RetryCount.name(), annotation.noOfRetries());
+            cucumberConfigProvider.setProperty(CucumberProperties.ThreadCount.name(), annotation.noOfThread());
+            cucumberConfigProvider.setProperty(CucumberProperties.SpringChildContext.name(), annotation.parentSpringContext());
+            cucumberConfigProvider.setProperty(CucumberProperties.SpringParentContext.name(), annotation.childSpringContext());
+        }
     }
 
     private RuntimeOptions getRuntimeOptions(Class<?> testClass) {
@@ -92,10 +106,10 @@ public class ParallelCucumber extends ParentRunner<ParallelFeatureRunner> {
     public void run(RunNotifier notifier) {
         super.run(notifier);
         ParallelJunitReporter.ReporterAndFormatter reporterAndFormatter = parallelCucumberExecutor.getReporterAndFormatter();
-        for(Future<ParallelJunitReporter> feature : features) {
+        for (Future<ParallelJunitReporter> feature : features) {
             try {
                 ParallelJunitReporter parallelJunitReporter = feature.get();
-                for(Consumer<ParallelJunitReporter.ReporterAndFormatter> consumer: parallelJunitReporter.getStream()) {
+                for (Consumer<ParallelJunitReporter.ReporterAndFormatter> consumer : parallelJunitReporter.getStream()) {
                     consumer.accept(reporterAndFormatter);
                 }
 
@@ -108,7 +122,7 @@ public class ParallelCucumber extends ParentRunner<ParallelFeatureRunner> {
         reporterAndFormatter.getFormatter().done();
         reporterAndFormatter.getFormatter().close();
 
-        try{
+        try {
             this.parallelCucumberExecutor.close();
             this.executorService.shutdown();
             if (!this.executorService.awaitTermination(10, TimeUnit.SECONDS)) {

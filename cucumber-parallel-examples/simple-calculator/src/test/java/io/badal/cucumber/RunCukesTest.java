@@ -17,9 +17,12 @@ package io.badal.cucumber;
 
 import cucumber.api.CucumberOptions;
 import io.badal.cucumber.api.ParallelCucumber;
+import io.badal.cucumber.api.ParallelCucumberConfig;
 import org.junit.runner.RunWith;
 
 @RunWith(ParallelCucumber.class)
 @CucumberOptions(plugin = {"html:target/cucumber-report.html"})
-public class RunCukes {
+@ParallelCucumberConfig(noOfRetries = 2, noOfThread = 3, parentSpringContext = {"application-context.xml"},
+        childSpringContext = {"child-application-context.xml"})
+public class RunCukesTest {
 }

@@ -27,6 +27,7 @@ import java.util.List;
 import static org.junit.Assert.assertEquals;
 
 public class RpnCalculatorStepdefs {
+
     private RpnCalculator calc;
 
     @Given("^a calculator I just turned on$")

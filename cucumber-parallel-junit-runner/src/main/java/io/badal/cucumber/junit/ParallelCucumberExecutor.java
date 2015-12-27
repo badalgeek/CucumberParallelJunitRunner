@@ -25,6 +25,8 @@ import cucumber.runtime.model.CucumberScenario;
 import gherkin.formatter.Reporter;
 import gherkin.formatter.model.Scenario;
 import gherkin.formatter.model.Tag;
+import io.badal.cucumber.CucumberConfigProvider;
+import io.badal.cucumber.CucumberProperties;
 import org.junit.runner.notification.RunNotifier;
 
 import java.util.Set;
@@ -94,18 +96,26 @@ public class ParallelCucumberExecutor {
         return new ThreadSafeEnvironment(resourceLoader, classFinder, classLoader, runtimeOptions, mutex);
     }
 
-    private static int getMaxRetryCount() {
+    private int getMaxRetryCount() {
         String threads = System.getProperty("Retry");
         if (threads != null) {
             return Integer.parseInt(threads);
         }
-        return 1;
+        return getValueFromConfig(CucumberProperties.RetryCount);
     }
 
-    private static int getThreadPoolSize() {
+    private int getThreadPoolSize() {
         String threads = System.getProperty("Threads");
         if (threads != null) {
             return Integer.parseInt(threads);
+        }
+        return getValueFromConfig(CucumberProperties.ThreadCount);
+    }
+
+    private int getValueFromConfig(CucumberProperties property) {
+        CucumberConfigProvider cucumberConfigProvider = CucumberConfigProvider.getInstance();
+        if(cucumberConfigProvider.isPropertyExist(property.name())){
+            return cucumberConfigProvider.getIntProperty(property.name());
         }
         return 1;
     }
